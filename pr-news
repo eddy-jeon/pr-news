@@ -50,8 +50,18 @@ main() {
   # Step 1: Repository Selection
   ui::section "Repository Selection"
 
+  # Fetch repos with spinner
   local repos
-  repos=$(gh::list_repos 30)
+  if [[ $HAS_GUM -eq 1 ]]; then
+    repos=$(gum spin --spinner dot --title "Loading repositories..." -- bash -c "
+      source '$SCRIPT_DIR/lib/github.sh'
+      gh::list_repos 30
+    ")
+  else
+    echo -en "${C_DIM}▸${C_RESET} Loading repositories... "
+    repos=$(gh::list_repos 30)
+    echo -e "${C_GREEN}✓${C_RESET}"
+  fi
 
   if [[ -z "$repos" ]]; then
     ui::error "No repositories found"
@@ -59,7 +69,7 @@ main() {
   fi
 
   local repo
-  repo=$(echo "$repos" | ui::choose "📦 Select repository")
+  repo=$(echo "$repos" | ui::choose "📦 Select repository (type to search, j/k to navigate)")
 
   if [[ -z "$repo" ]]; then
     ui::error "No repository selected"
@@ -72,7 +82,18 @@ main() {
   ui::section "Fetching PRs (last $DAYS days)"
 
   local prs_json
-  prs_json=$(gh::list_merged_prs "$repo" "$DAYS")
+  if [[ $HAS_GUM -eq 1 ]]; then
+    prs_json=$(gum spin --spinner dot --title "Fetching merged PRs from $repo..." -- bash -c "
+      source '$SCRIPT_DIR/lib/config.sh'
+      source '$SCRIPT_DIR/lib/github.sh'
+      config::load
+      gh::list_merged_prs '$repo' '$DAYS'
+    ")
+  else
+    echo -en "${C_DIM}▸${C_RESET} Fetching merged PRs... "
+    prs_json=$(gh::list_merged_prs "$repo" "$DAYS")
+    echo -e "${C_GREEN}✓${C_RESET}"
+  fi
 
   local pr_count
   pr_count=$(echo "$prs_json" | jq 'length')
@@ -95,7 +116,7 @@ main() {
     local number=$(echo "$pr" | jq -r '.number')
     local title=$(echo "$pr" | jq -r '.title')
 
-    ui::progress "$current" "$pr_count" "PR #$number: ${title:0:40}..."
+    ui::progress "$current" "$pr_count" "PR #$number: ${title:0:35}..."
 
     local pr_data
     pr_data=$(gh::collect_pr_data "$repo" "$pr")
@@ -103,7 +124,7 @@ main() {
     all_pr_data+="\n---\n"
   done < <(echo "$prs_json" | jq -c '.[]')
 
-  echo "" # New line after progress
+  ui::progress_done
 
   ui::success "Collected data from $pr_count PRs"
 

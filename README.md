@@ -133,9 +133,27 @@ DAYS=14 ./pr-news
 
 | 환경 | 선택 UI | 스피너 | 스타일 |
 |------|---------|--------|--------|
-| gum 설치됨 | gum choose | gum spin | gum style |
-| fzf만 있음 | fzf | 텍스트 | ANSI 색상 |
+| gum 설치됨 | gum filter (검색) | gum spin | gum style |
+| fzf만 있음 | fzf (vim keys) | 텍스트 | ANSI 색상 |
 | 둘 다 없음 | bash select | 텍스트 | 기본 |
+
+## Keyboard Shortcuts (Vim-style)
+
+레포 선택 시 사용 가능한 키:
+
+| Key | Action |
+|-----|--------|
+| `j` / `↓` | 아래로 이동 |
+| `k` / `↑` | 위로 이동 |
+| `Ctrl+d` | 반 페이지 아래 |
+| `Ctrl+u` | 반 페이지 위 |
+| `Ctrl+f` | 한 페이지 아래 |
+| `Ctrl+b` | 한 페이지 위 |
+| `/` | 검색 토글 |
+| `Enter` | 선택 |
+| `Esc` | 취소 |
+
+**gum 사용 시**: 바로 타이핑하면 검색됩니다 (fuzzy filter)
 
 ## Troubleshooting
 

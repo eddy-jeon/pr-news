@@ -21,6 +21,12 @@
 #   HAS_GUM - gum 설치 여부 (1/0)
 #   HAS_FZF - fzf 설치 여부 (1/0)
 #
+# Vim Keybindings (fzf):
+#   j/k - up/down navigation
+#   Ctrl+d/u - half page scroll
+#   Ctrl+f/b - full page scroll
+#   / - toggle search
+#
 
 # ANSI Color codes
 readonly C_RESET='\033[0m'
@@ -115,14 +121,23 @@ ui::info() {
   fi
 }
 
-# Interactive choice (reads from stdin)
+# Interactive choice with search (reads from stdin)
+# Supports vim keybindings: j/k for navigation, / for search
 ui::choose() {
   local header="$1"
 
   if [[ $HAS_GUM -eq 1 ]]; then
-    gum choose --header "$header"
+    # gum filter: 검색 + 선택 지원
+    gum filter --header "$header" --placeholder "Type to search..." --height=15
   elif [[ $HAS_FZF -eq 1 ]]; then
-    fzf --prompt="$header " --height=15 --reverse
+    # fzf with vim keybindings
+    fzf --prompt="$header " \
+        --height=15 \
+        --reverse \
+        --bind='j:down,k:up,ctrl-j:down,ctrl-k:up' \
+        --bind='ctrl-d:half-page-down,ctrl-u:half-page-up' \
+        --bind='ctrl-f:page-down,ctrl-b:page-up' \
+        --bind='/:toggle-search'
   else
     # Fallback to bash select - read stdin into array
     local items=()
@@ -166,16 +181,61 @@ ui::box() {
   fi
 }
 
-# Progress indicator
+# Progress indicator with bar
 ui::progress() {
   local current="$1"
   local total="$2"
   local message="$3"
+  local width=30
+  local percent=$((current * 100 / total))
+  local filled=$((current * width / total))
+  local empty=$((width - filled))
+
+  # Build progress bar
+  local bar=""
+  for ((i=0; i<filled; i++)); do bar+="█"; done
+  for ((i=0; i<empty; i++)); do bar+="░"; done
 
   if [[ $HAS_GUM -eq 1 ]]; then
-    echo -ne "\r"
-    gum style --foreground 6 "[$current/$total] $message"
+    # Clear line and print
+    echo -ne "\r\033[K"
+    gum style --foreground 6 "[$current/$total] $bar ${percent}% $message"
   else
-    echo -e "${C_DIM}[$current/$total]${C_RESET} $message"
+    # Clear line and print
+    echo -ne "\r\033[K"
+    echo -ne "${C_CYAN}[$current/$total]${C_RESET} ${C_DIM}${bar}${C_RESET} ${percent}% $message"
   fi
+}
+
+# Progress indicator - finish (new line)
+ui::progress_done() {
+  echo ""
+}
+
+# Fetch indicator with spinner animation
+ui::fetch_start() {
+  local message="$1"
+  if [[ $HAS_GUM -eq 1 ]]; then
+    echo -e "${C_DIM}▸${C_RESET} $message"
+  else
+    echo -en "${C_DIM}▸${C_RESET} $message "
+  fi
+}
+
+# Spinner frames for fetch animation
+readonly SPINNER_FRAMES=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
+
+# Animated fetch indicator (call in loop)
+ui::fetch_tick() {
+  local frame_idx="$1"
+  local message="$2"
+  local frame="${SPINNER_FRAMES[$((frame_idx % ${#SPINNER_FRAMES[@]}))]}"
+
+  echo -ne "\r\033[K${C_CYAN}${frame}${C_RESET} $message"
+}
+
+# Fetch complete
+ui::fetch_done() {
+  local message="$1"
+  echo -e "\r\033[K${C_GREEN}✓${C_RESET} $message"
 }
