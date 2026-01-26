@@ -1,0 +1,162 @@
+#!/bin/bash
+#
+# PR News - GitHub PR Learning Tool
+# ==================================
+#
+# GitHub 레포지토리의 최근 머지된 PR들을 분석하여
+# 컨트리뷰터가 따라잡아야 할 내용을 LLM 기반으로 요약합니다.
+#
+# Usage:
+#   ./pr-news              # 대화형 실행
+#   DAYS=14 ./pr-news      # 환경 변수로 설정 오버라이드
+#
+# Configuration:
+#   ~/.pr-news.conf        # 설정 파일 (선택)
+#
+# Requirements:
+#   - gh (GitHub CLI, authenticated)
+#   - claude (Claude CLI)
+#   - jq (JSON processing)
+#   - gum (optional, for better TUI)
+#   - fzf (optional, for fuzzy selection)
+#
+# Author: Generated with Claude Code
+#
+
+set -euo pipefail
+
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Load modules
+source "$SCRIPT_DIR/lib/config.sh"
+source "$SCRIPT_DIR/lib/ui.sh"
+source "$SCRIPT_DIR/lib/github.sh"
+source "$SCRIPT_DIR/lib/llm.sh"
+
+# Main function
+main() {
+  # Load configuration
+  config::load
+
+  # Check dependencies
+  if ! config::check_deps; then
+    exit 1
+  fi
+
+  # Show header
+  ui::header
+
+  # Step 1: Repository Selection
+  ui::section "Repository Selection"
+
+  local repos
+  repos=$(gh::list_repos 30)
+
+  if [[ -z "$repos" ]]; then
+    ui::error "No repositories found"
+    exit 1
+  fi
+
+  local repo
+  repo=$(echo "$repos" | ui::choose "📦 Select repository")
+
+  if [[ -z "$repo" ]]; then
+    ui::error "No repository selected"
+    exit 1
+  fi
+
+  ui::success "Selected: $repo"
+
+  # Step 2: Fetch PRs
+  ui::section "Fetching PRs (last $DAYS days)"
+
+  local prs_json
+  prs_json=$(gh::list_merged_prs "$repo" "$DAYS")
+
+  local pr_count
+  pr_count=$(echo "$prs_json" | jq 'length')
+
+  if [[ "$pr_count" -eq 0 ]]; then
+    ui::info "No merged PRs found in the last $DAYS days"
+    exit 0
+  fi
+
+  ui::success "Found $pr_count merged PRs"
+
+  # Step 3: Collect PR data
+  ui::section "Analyzing PRs"
+
+  local all_pr_data=""
+  local current=0
+
+  while IFS= read -r pr; do
+    current=$((current + 1))
+    local number=$(echo "$pr" | jq -r '.number')
+    local title=$(echo "$pr" | jq -r '.title')
+
+    ui::progress "$current" "$pr_count" "PR #$number: ${title:0:40}..."
+
+    local pr_data
+    pr_data=$(gh::collect_pr_data "$repo" "$pr")
+    all_pr_data+="$pr_data"
+    all_pr_data+="\n---\n"
+  done < <(echo "$prs_json" | jq -c '.[]')
+
+  echo "" # New line after progress
+
+  ui::success "Collected data from $pr_count PRs"
+
+  # Step 4: Generate Summary with LLM
+  ui::section "Generating Summary"
+
+  # Build prompt for Claude
+  local prompt="다음은 ${repo} 레포지토리의 최근 머지된 PR ${pr_count}개입니다.
+컨트리뷰터로서 따라잡아야 할 핵심 내용을 요약해주세요.
+
+---
+$(echo -e "$all_pr_data")
+---
+
+위 PR들을 분석하여 다음 섹션으로 요약해주세요:
+
+## 📦 주요 변경사항
+(새 기능, 개선, 리팩토링 등)
+
+## 🐛 버그 수정
+(있는 경우만)
+
+## 💡 학습 포인트
+(리뷰 코멘트에서 얻은 인사이트, 코드 패턴 등)
+
+## ⚠️ 주의사항
+(breaking changes, 마이그레이션 필요 등 - 있는 경우만)"
+
+  # Write prompt to temp file for Claude
+  local tmp_file=$(mktemp)
+  echo "$prompt" > "$tmp_file"
+
+  local summary
+  if [[ $HAS_GUM -eq 1 ]]; then
+    summary=$(gum spin --spinner dot --title "Claude is analyzing..." -- \
+      bash -c "cat '$tmp_file' | claude -p 2>/dev/null")
+  else
+    echo -en "${C_DIM}▸${C_RESET} Claude is analyzing... "
+    summary=$(cat "$tmp_file" | claude -p 2>/dev/null)
+    echo -e "${C_GREEN}✓${C_RESET}"
+  fi
+
+  rm -f "$tmp_file"
+
+  # Step 5: Display Summary
+  ui::section "PR News Summary for $repo"
+
+  echo ""
+  echo "$summary"
+  echo ""
+
+  ui::info "Analyzed $pr_count PRs from last $DAYS days"
+}
+
+# Run main
+main "$@"

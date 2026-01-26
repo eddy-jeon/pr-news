@@ -1,0 +1,15 @@
+# PR News Configuration
+# Copy this file to ~/.pr-news.conf and customize
+
+# Number of days to look back for merged PRs
+DAYS=7
+
+# PR size thresholds (PRs larger than these show summary only)
+THRESHOLD_FILES=10
+THRESHOLD_CHANGES=500
+
+# Include review comments in analysis
+INCLUDE_REVIEW_COMMENTS=true
+
+# Bot usernames to exclude from review comments (comma-separated)
+BOT_FILTER="coderabbitai,snyk-io-us,dependabot,github-actions,codecov"

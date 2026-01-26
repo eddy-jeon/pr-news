@@ -1,0 +1,17 @@
+# Configuration (user-specific)
+.pr-news.conf
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+
+# Editor files
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Debug logs
+*.log
