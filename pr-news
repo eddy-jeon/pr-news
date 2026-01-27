@@ -78,7 +78,37 @@ main() {
 
   ui::success "Selected: $repo"
 
-  # Step 2: Fetch PRs
+  # Step 2: Configure Options
+  ui::section "Options"
+
+  # Get days input
+  local days_input
+  days_input=$(ui::input "📅 조회 기간 (일)" "$DAYS" "숫자 입력")
+  DAYS="${days_input:-$DAYS}"
+  ui::success "기간: ${DAYS}일"
+
+  # Get base branch (optional)
+  local base_branch=""
+  local branches
+  ui::status "브랜치 목록 조회중..."
+  branches=$(gh::list_branches "$repo" 20)
+  ui::clear_line
+
+  if [[ -n "$branches" ]]; then
+    # Add "all branches" option at the top
+    local branch_options="(전체 브랜치)"$'\n'"$branches"
+    local selected_branch
+    selected_branch=$(echo "$branch_options" | ui::choose "🌿 대상 브랜치 선택 (Enter: 전체)")
+
+    if [[ -n "$selected_branch" && "$selected_branch" != "(전체 브랜치)" ]]; then
+      base_branch="$selected_branch"
+      ui::success "브랜치: $base_branch"
+    else
+      ui::success "브랜치: 전체"
+    fi
+  fi
+
+  # Step 3: Fetch PRs
   ui::section "Fetching PRs (last $DAYS days)"
 
   local prs_json
@@ -87,12 +117,12 @@ main() {
       source '$SCRIPT_DIR/lib/config.sh'
       source '$SCRIPT_DIR/lib/github.sh'
       config::load
-      gh::list_merged_prs '$repo' '$DAYS'
+      gh::list_merged_prs '$repo' '$DAYS' '$base_branch'
     ")
   else
-    echo -en "${C_DIM}▸${C_RESET} Fetching merged PRs... "
-    prs_json=$(gh::list_merged_prs "$repo" "$DAYS")
-    echo -e "${C_GREEN}✓${C_RESET}"
+    ui::status "Fetching merged PRs..."
+    prs_json=$(gh::list_merged_prs "$repo" "$DAYS" "$base_branch")
+    ui::status_done "Fetched merged PRs"
   fi
 
   local pr_count
@@ -105,7 +135,7 @@ main() {
 
   ui::success "Found $pr_count merged PRs"
 
-  # Step 3: Collect PR data
+  # Step 4: Collect PR data
   ui::section "Analyzing PRs"
 
   local all_pr_data=""
@@ -116,7 +146,8 @@ main() {
     local number=$(echo "$pr" | jq -r '.number')
     local title=$(echo "$pr" | jq -r '.title')
 
-    ui::progress "$current" "$pr_count" "PR #$number: ${title:0:35}..."
+    # In-place progress update (same line)
+    ui::status "[$current/$pr_count] PR #$number: ${title:0:40}..."
 
     local pr_data
     pr_data=$(gh::collect_pr_data "$repo" "$pr")
@@ -124,11 +155,10 @@ main() {
     all_pr_data+="\n---\n"
   done < <(echo "$prs_json" | jq -c '.[]')
 
-  ui::progress_done
+  # Clear progress line and show completion
+  ui::status_done "Collected data from $pr_count PRs"
 
-  ui::success "Collected data from $pr_count PRs"
-
-  # Step 4: Generate Summary with LLM
+  # Step 5: Generate Summary with LLM
   ui::section "Generating Summary"
 
   # Build prompt for Claude
@@ -169,7 +199,7 @@ $(echo -e "$all_pr_data")
 
   rm -f "$tmp_file"
 
-  # Step 5: Display Summary
+  # Step 6: Display Summary
   ui::section "PR News Summary for $repo"
 
   echo ""

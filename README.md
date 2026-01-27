@@ -64,10 +64,11 @@ pr-news
 ### Flow
 
 1. **Repository Selection** - 접근 가능한 레포 중 선택
-2. **PR Fetching** - 최근 N일간 머지된 PR 조회
-3. **Data Collection** - PR 상세 정보 수집
-4. **LLM Analysis** - Claude로 종합 요약 생성
-5. **Summary Output** - 터미널에 결과 출력
+2. **Options** - 조회 기간(일) 입력 및 대상 브랜치 선택
+3. **PR Fetching** - 머지된 PR 조회
+4. **Data Collection** - PR 상세 정보 수집
+5. **LLM Analysis** - Claude로 종합 요약 생성
+6. **Summary Output** - 터미널에 결과 출력
 
 ## Configuration
 

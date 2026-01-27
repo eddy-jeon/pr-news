@@ -239,3 +239,43 @@ ui::fetch_done() {
   local message="$1"
   echo -e "\r\033[K${C_GREEN}✓${C_RESET} $message"
 }
+
+# Input prompt (for text input)
+ui::input() {
+  local prompt="$1"
+  local default="${2:-}"
+  local placeholder="${3:-}"
+
+  if [[ $HAS_GUM -eq 1 ]]; then
+    if [[ -n "$default" ]]; then
+      gum input --prompt "$prompt " --value "$default" --placeholder "$placeholder"
+    else
+      gum input --prompt "$prompt " --placeholder "$placeholder"
+    fi
+  else
+    if [[ -n "$default" ]]; then
+      read -p "$prompt [$default]: " input
+      echo "${input:-$default}"
+    else
+      read -p "$prompt: " input
+      echo "$input"
+    fi
+  fi
+}
+
+# Clear current line (for in-place updates)
+ui::clear_line() {
+  echo -ne "\r\033[K"
+}
+
+# In-place status update (same line)
+ui::status() {
+  local message="$1"
+  echo -ne "\r\033[K${C_DIM}▸${C_RESET} $message"
+}
+
+# In-place status complete
+ui::status_done() {
+  local message="$1"
+  echo -e "\r\033[K${C_GREEN}✓${C_RESET} $message"
+}

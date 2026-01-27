@@ -35,19 +35,34 @@ gh::list_repos() {
   } | sort -u
 }
 
-# List merged PRs in date range
+# List merged PRs in date range (with optional base branch filter)
 gh::list_merged_prs() {
   local repo="$1"
   local days="${2:-$DAYS}"
+  local base_branch="${3:-}"
 
   local since_date=$(date -v-${days}d +%Y-%m-%d 2>/dev/null || date -d "$days days ago" +%Y-%m-%d)
+
+  # Build search query
+  local search_query="merged:>=$since_date"
+  if [[ -n "$base_branch" ]]; then
+    search_query+=" base:$base_branch"
+  fi
 
   gh pr list \
     --repo "$repo" \
     --state merged \
-    --search "merged:>=$since_date" \
+    --search "$search_query" \
     --limit 50 \
     --json number,title,body,additions,deletions,changedFiles,mergedAt,author,url
+}
+
+# List branches in a repository
+gh::list_branches() {
+  local repo="$1"
+  local limit="${2:-20}"
+
+  gh api "repos/$repo/branches" --paginate --jq '.[].name' 2>/dev/null | head -n "$limit"
 }
 
 # Get PR detail
