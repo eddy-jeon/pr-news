@@ -87,25 +87,14 @@ main() {
   DAYS="${days_input:-$DAYS}"
   ui::success "기간: ${DAYS}일"
 
-  # Get base branch (optional)
-  local base_branch=""
-  local branches
-  ui::status "브랜치 목록 조회중..."
-  branches=$(gh::list_branches "$repo" 20)
-  ui::clear_line
+  # Get base branch (optional) - direct input
+  local base_branch
+  base_branch=$(ui::input "🌿 대상 브랜치 (Enter: 전체)" "" "main, develop, ...")
 
-  if [[ -n "$branches" ]]; then
-    # Add "all branches" option at the top
-    local branch_options="(전체 브랜치)"$'\n'"$branches"
-    local selected_branch
-    selected_branch=$(echo "$branch_options" | ui::choose "🌿 대상 브랜치 선택 (Enter: 전체)")
-
-    if [[ -n "$selected_branch" && "$selected_branch" != "(전체 브랜치)" ]]; then
-      base_branch="$selected_branch"
-      ui::success "브랜치: $base_branch"
-    else
-      ui::success "브랜치: 전체"
-    fi
+  if [[ -n "$base_branch" ]]; then
+    ui::success "브랜치: $base_branch"
+  else
+    ui::success "브랜치: 전체"
   fi
 
   # Step 3: Fetch PRs
@@ -146,11 +135,11 @@ main() {
     local number=$(echo "$pr" | jq -r '.number')
     local title=$(echo "$pr" | jq -r '.title')
 
-    # In-place progress update (same line)
-    ui::status "[$current/$pr_count] PR #$number: ${title:0:40}..."
+    # In-place progress update (same line, short title to avoid line wrap)
+    ui::status "[$current/$pr_count] #$number: ${title:0:25}..."
 
     local pr_data
-    pr_data=$(gh::collect_pr_data "$repo" "$pr")
+    pr_data=$(gh::collect_pr_data "$repo" "$pr" 2>/dev/null)
     all_pr_data+="$pr_data"
     all_pr_data+="\n---\n"
   done < <(echo "$prs_json" | jq -c '.[]')

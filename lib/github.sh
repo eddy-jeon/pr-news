@@ -57,14 +57,6 @@ gh::list_merged_prs() {
     --json number,title,body,additions,deletions,changedFiles,mergedAt,author,url
 }
 
-# List branches in a repository
-gh::list_branches() {
-  local repo="$1"
-  local limit="${2:-20}"
-
-  gh api "repos/$repo/branches" --paginate --jq '.[].name' 2>/dev/null | head -n "$limit"
-}
-
 # Get PR detail
 gh::get_pr_detail() {
   local repo="$1"
