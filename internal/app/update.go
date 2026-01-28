@@ -31,10 +31,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.State == StateDone || m.State == StateError {
 				return m, tea.Quit
 			}
-		case "enter":
-			if m.State == StateInput {
-				return m, m.startFetch()
-			}
 		case "r":
 			if m.State == StateDone || m.State == StateError {
 				m.State = StateInput
@@ -42,6 +38,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.prData = ""
 				return m, nil
 			}
+		}
+
+	case panel.StartSearchMsg:
+		if m.State == StateInput {
+			return m, m.startFetch()
 		}
 
 	case ReposLoadedMsg:

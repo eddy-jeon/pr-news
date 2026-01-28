@@ -31,15 +31,18 @@ type Model struct {
 }
 
 func NewModel() Model {
+	o := panel.NewOutputPanel()
+	o.State = panel.OutputLoading
 	return Model{
 		State:  StateLoading,
 		Input:  panel.NewInputPanel(),
-		Output: panel.NewOutputPanel(),
+		Output: o,
 	}
 }
 
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(
+		m.Input.Init(),
 		m.Output.Init(),
 		loadReposCmd(),
 	)

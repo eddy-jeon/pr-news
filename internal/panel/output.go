@@ -14,7 +14,8 @@ import (
 type OutputState int
 
 const (
-	OutputIdle OutputState = iota
+	OutputLoading OutputState = iota
+	OutputIdle
 	OutputFetching
 	OutputSummarizing
 	OutputDone
@@ -50,11 +51,11 @@ func (p *OutputPanel) SetSize(w, h int) {
 	p.Width = w
 	p.Height = h
 	if !p.ready {
-		p.viewport = viewport.New(w, h-4)
+		p.viewport = viewport.New(w, h-3)
 		p.ready = true
 	} else {
 		p.viewport.Width = w
-		p.viewport.Height = h - 4
+		p.viewport.Height = h - 3
 	}
 }
 
@@ -72,7 +73,7 @@ func (p *OutputPanel) SetContent(md string) {
 func (p OutputPanel) Update(msg tea.Msg) (OutputPanel, tea.Cmd) {
 	var cmds []tea.Cmd
 
-	if p.State == OutputFetching || p.State == OutputSummarizing {
+	if p.State == OutputLoading || p.State == OutputFetching || p.State == OutputSummarizing {
 		var cmd tea.Cmd
 		p.spinner, cmd = p.spinner.Update(msg)
 		cmds = append(cmds, cmd)
@@ -94,10 +95,12 @@ func (p OutputPanel) Init() tea.Cmd {
 func (p OutputPanel) View() string {
 	var b strings.Builder
 
-	title := style.PanelTitle.Render("Output")
-	b.WriteString(title + "\n\n")
+	b.WriteString(style.PanelTitle.Render("Output") + "\n")
 
 	switch p.State {
+	case OutputLoading:
+		b.WriteString(p.spinner.View() + " " + style.StatusText.Render("Loading repositories..."))
+
 	case OutputIdle:
 		b.WriteString(style.StatusText.Render("Select a repository and press Enter to start."))
 
@@ -111,12 +114,12 @@ func (p OutputPanel) View() string {
 		if p.ready {
 			b.WriteString(p.viewport.View() + "\n")
 			b.WriteString(style.HelpStyle.Render(
-				fmt.Sprintf("[j/k] Scroll  [r] Restart  %d%%", int(p.viewport.ScrollPercent()*100))))
+				fmt.Sprintf("j/k scroll  r restart  %d%%", int(p.viewport.ScrollPercent()*100))))
 		}
 
 	case OutputError:
-		b.WriteString(style.ErrorText.Render("Error: " + p.Error) + "\n\n")
-		b.WriteString(style.HelpStyle.Render("[r] Retry  [q] Quit"))
+		b.WriteString(style.ErrorText.Render("Error: "+p.Error) + "\n\n")
+		b.WriteString(style.HelpStyle.Render("r retry  q quit"))
 	}
 
 	return b.String()

@@ -3,42 +3,43 @@ package style
 import "github.com/charmbracelet/lipgloss"
 
 var (
-	// Colors
-	Cyan    = lipgloss.Color("#00BFFF")
-	Green   = lipgloss.Color("#00FF7F")
-	Yellow  = lipgloss.Color("#FFD700")
-	Magenta = lipgloss.Color("#FF69B4")
-	Red     = lipgloss.Color("#FF4444")
-	Dim     = lipgloss.Color("#666666")
-	White   = lipgloss.Color("#FFFFFF")
+	// 2-color palette: soft blue + soft green
+	Primary = lipgloss.Color("#82AAFF")
+	Accent  = lipgloss.Color("#C3E88D")
+	Dim     = lipgloss.Color("#555555")
+	Text    = lipgloss.Color("#CDD6F4")
+	Red     = lipgloss.Color("#F38BA8")
 
-	// Panel borders
+	// Panel borders — minimal padding
 	InputPanel = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
-			BorderForeground(Cyan).
-			Padding(1, 2)
+			BorderForeground(Primary).
+			Padding(0, 1)
 
 	OutputPanel = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
-			BorderForeground(Magenta).
-			Padding(1, 2)
+			BorderForeground(Dim).
+			Padding(0, 1)
 
-	// Title styles
+	// Titles
 	PanelTitle = lipgloss.NewStyle().
 			Bold(true).
-			Foreground(Cyan)
+			Foreground(Primary)
 
 	// Status
-	StatusText = lipgloss.NewStyle().Foreground(Dim)
-	ErrorText  = lipgloss.NewStyle().Foreground(Red).Bold(true)
-	SuccessText = lipgloss.NewStyle().Foreground(Green)
+	StatusText  = lipgloss.NewStyle().Foreground(Dim)
+	ErrorText   = lipgloss.NewStyle().Foreground(Red)
+	SuccessText = lipgloss.NewStyle().Foreground(Accent)
 
 	// List items
-	SelectedItem   = lipgloss.NewStyle().Foreground(Cyan).Bold(true)
-	UnselectedItem = lipgloss.NewStyle().Foreground(White)
-	CursorStyle    = lipgloss.NewStyle().Foreground(Cyan)
+	SelectedItem   = lipgloss.NewStyle().Foreground(Primary).Bold(true)
+	UnselectedItem = lipgloss.NewStyle().Foreground(Text)
+	CursorStyle    = lipgloss.NewStyle().Foreground(Accent)
 
 	// Labels
-	Label     = lipgloss.NewStyle().Foreground(Yellow).Bold(true)
+	Label     = lipgloss.NewStyle().Foreground(Primary)
 	HelpStyle = lipgloss.NewStyle().Foreground(Dim)
+
+	// Active field indicator
+	ActiveLabel = lipgloss.NewStyle().Foreground(Accent).Bold(true)
 )
