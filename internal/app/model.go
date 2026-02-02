@@ -22,9 +22,10 @@ type Model struct {
 	Output panel.OutputPanel
 
 	// collected data
-	prData  string
-	prCount int
-	repo    string
+	prData    string
+	prCount   int
+	repo      string
+	dateRange string // PR 기간 (예: "2026-01-26 ~ 2026-02-02")
 
 	width  int
 	height int

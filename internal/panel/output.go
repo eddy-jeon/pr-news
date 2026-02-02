@@ -23,11 +23,13 @@ const (
 )
 
 type OutputPanel struct {
-	State    OutputState
-	Status   string
-	Progress string
-	Content  string
-	Error    string
+	State      OutputState
+	Status     string
+	Progress   string
+	Content    string
+	RawContent string // 원본 마크다운 (클립보드용)
+	CopyMsg    string // "Copied!" 메시지 (일시적)
+	Error      string
 
 	spinner  spinner.Model
 	viewport viewport.Model
@@ -60,6 +62,7 @@ func (p *OutputPanel) SetSize(w, h int) {
 }
 
 func (p *OutputPanel) SetContent(md string) {
+	p.RawContent = md // 원본 저장 (클립보드용)
 	rendered, err := glamour.Render(md, "dark")
 	if err != nil {
 		rendered = md
@@ -113,8 +116,11 @@ func (p OutputPanel) View() string {
 	case OutputDone:
 		if p.ready {
 			b.WriteString(p.viewport.View() + "\n")
-			b.WriteString(style.HelpStyle.Render(
-				fmt.Sprintf("j/k scroll  r restart  %d%%", int(p.viewport.ScrollPercent()*100))))
+			help := fmt.Sprintf("j/k scroll  c copy  r restart  %d%%", int(p.viewport.ScrollPercent()*100))
+			if p.CopyMsg != "" {
+				help = fmt.Sprintf("j/k scroll  %s  r restart  %d%%", p.CopyMsg, int(p.viewport.ScrollPercent()*100))
+			}
+			b.WriteString(style.HelpStyle.Render(help))
 		}
 
 	case OutputError:

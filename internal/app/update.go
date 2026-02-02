@@ -2,8 +2,10 @@ package app
 
 import (
 	"fmt"
+	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/eddy/pr-news/internal/github"
@@ -38,12 +40,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.prData = ""
 				return m, nil
 			}
+		case "c":
+			if m.State == StateDone && m.Output.RawContent != "" {
+				cmd := exec.Command("pbcopy")
+				cmd.Stdin = strings.NewReader(m.Output.RawContent)
+				if err := cmd.Run(); err == nil {
+					m.Output.CopyMsg = "Copied!"
+					return m, clearCopyMsgAfter(2 * time.Second)
+				}
+			}
 		}
 
 	case panel.StartSearchMsg:
 		if m.State == StateInput {
 			return m, m.startFetch()
 		}
+
+	case ClearCopyMsg:
+		m.Output.CopyMsg = ""
+		return m, nil
 
 	case ReposLoadedMsg:
 		if msg.Err != nil {
@@ -76,11 +91,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case PRDataCollectedMsg:
 		m.prData = msg.Data
+		m.dateRange = fmt.Sprintf("%s ~ %s", msg.StartDate, msg.EndDate)
 		m.State = StateSummarizing
 		m.Output.State = panel.OutputSummarizing
 		m.Output.Status = "Claude is analyzing..."
-		m.Output.Progress = fmt.Sprintf("%d PRs collected", msg.Total)
-		return m, summarizeCmd(m.prData, m.repo, m.prCount)
+		m.Output.Progress = fmt.Sprintf("%d PRs collected (%s)", msg.Total, m.dateRange)
+		return m, summarizeCmd(m.prData, m.repo, m.prCount, m.dateRange)
 
 	case SummaryDoneMsg:
 		if msg.Err != nil {
@@ -147,23 +163,40 @@ func fetchPRsCmd(repo string, days int, branch string) tea.Cmd {
 func collectPRDataCmd(repo string, prs []github.PR) tea.Cmd {
 	return func() tea.Msg {
 		var b strings.Builder
+		var startDate, endDate time.Time
+
 		for i, pr := range prs {
-			_ = i
+			// 날짜 범위 계산
+			if i == 0 || pr.MergedAt.Before(startDate) {
+				startDate = pr.MergedAt
+			}
+			if i == 0 || pr.MergedAt.After(endDate) {
+				endDate = pr.MergedAt
+			}
+
 			data := github.CollectPRData(repo, pr)
 			b.WriteString(data)
 			b.WriteString("\n---\n")
 		}
 		return PRDataCollectedMsg{
-			Data:    b.String(),
-			Current: len(prs),
-			Total:   len(prs),
+			Data:      b.String(),
+			Current:   len(prs),
+			Total:     len(prs),
+			StartDate: startDate.Format("2006-01-02"),
+			EndDate:   endDate.Format("2006-01-02"),
 		}
 	}
 }
 
-func summarizeCmd(prData, repo string, count int) tea.Cmd {
+func summarizeCmd(prData, repo string, count int, dateRange string) tea.Cmd {
 	return func() tea.Msg {
-		summary, err := llm.Summarize(prData, repo, count)
+		summary, err := llm.Summarize(prData, repo, count, dateRange)
 		return SummaryDoneMsg{Summary: summary, Err: err}
 	}
+}
+
+func clearCopyMsgAfter(d time.Duration) tea.Cmd {
+	return tea.Tick(d, func(time.Time) tea.Msg {
+		return ClearCopyMsg{}
+	})
 }

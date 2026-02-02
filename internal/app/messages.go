@@ -15,9 +15,11 @@ type PRsFetchedMsg struct {
 }
 
 type PRDataCollectedMsg struct {
-	Data    string
-	Current int
-	Total   int
+	Data      string
+	Current   int
+	Total     int
+	StartDate string // 가장 오래된 PR 날짜
+	EndDate   string // 가장 최근 PR 날짜
 }
 
 type SummaryDoneMsg struct {
@@ -26,3 +28,6 @@ type SummaryDoneMsg struct {
 }
 
 type ErrMsg struct{ Err error }
+
+// ClearCopyMsg clears the "Copied!" feedback after a delay
+type ClearCopyMsg struct{}

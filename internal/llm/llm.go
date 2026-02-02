@@ -22,8 +22,9 @@ const systemPrompt = `당신은 GitHub PR 변경사항을 분석하여 팀원이
 - 핵심만 추출 (장황하게 X)`
 
 // Summarize sends PR data to Claude CLI and returns the summary.
-func Summarize(prData, repo string, prCount int) (string, error) {
+func Summarize(prData, repo string, prCount int, dateRange string) (string, error) {
 	userPrompt := fmt.Sprintf(`다음은 %s 레포지토리의 최근 머지된 PR %d개입니다.
+기간: %s
 컨트리뷰터로서 따라잡아야 할 핵심 내용을 요약해주세요.
 
 ---
@@ -31,6 +32,8 @@ func Summarize(prData, repo string, prCount int) (string, error) {
 ---
 
 위 PR들을 분석하여 다음 섹션으로 요약해주세요:
+
+# %s PR 요약 (%s)
 
 ## 📦 주요 변경사항
 (새 기능, 개선, 리팩토링 등)
@@ -42,7 +45,7 @@ func Summarize(prData, repo string, prCount int) (string, error) {
 (리뷰 코멘트에서 얻은 인사이트, 코드 패턴 등)
 
 ## ⚠️ 주의사항
-(breaking changes, 마이그레이션 필요 등 - 있는 경우만)`, repo, prCount, prData)
+(breaking changes, 마이그레이션 필요 등 - 있는 경우만)`, repo, prCount, dateRange, prData, repo, dateRange)
 
 	cmd := exec.Command("claude", "-p", "--system-prompt", systemPrompt)
 	cmd.Stdin = strings.NewReader(userPrompt)
