@@ -1,0 +1,5 @@
+{
+  "name": "pr-news",
+  "version": "1.0.0",
+  "description": "GitHub PR 분석 및 요약 플러그인 - 최근 머지된 PR들을 분석하여 팀원이 따라잡아야 할 내용을 요약합니다"
+}
